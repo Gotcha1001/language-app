@@ -289,20 +289,40 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
+import Link from "next/link";
 
 export default function LandingPage() {
-    const [isSignedIn, setIsSignedIn] = useState(false);
-    const [user, setUser] = useState(null);
+    const { isSignedIn, user } = useUser();
 
-    // Mock user state for demonstration
+    // Create user in database when they sign in
     useEffect(() => {
-        // Simulate user authentication state
-        const mockUser = { firstName: "John" };
-        setUser(mockUser);
-        setIsSignedIn(true);
-    }, []);
+        const createUserInDatabase = async () => {
+            if (isSignedIn && user) {
+                try {
+                    const response = await fetch('/api/user', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            nativeLanguage: 'en', // Default or get from user preferences
+                            targetLanguage: 'es'  // Default or get from user preferences
+                        }),
+                    });
+
+                    const data = await response.json();
+                    console.log('User database creation result:', data);
+                } catch (error) {
+                    console.error('Error creating user in database:', error);
+                }
+            }
+        };
+
+        createUserInDatabase();
+    }, [isSignedIn, user]);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -341,9 +361,12 @@ export default function LandingPage() {
         }
     };
 
-    const Button = ({ children, className, onClick, ...props }) => (
+    const Button = ({ children, className, onClick, variant, ...props }) => (
         <button
-            className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${className}`}
+            className={`px-4 py-2 rounded-md font-medium transition-all duration-200 ${variant === "outline"
+                    ? "bg-transparent border-2"
+                    : ""
+                } ${className}`}
             onClick={onClick}
             {...props}
         >
@@ -423,45 +446,54 @@ export default function LandingPage() {
                                 Welcome, {user?.firstName}!
                             </motion.span>
                             <div className="flex items-center space-x-4">
-                                <motion.div
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    <Button className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-200">
-                                        Dashboard
-                                    </Button>
-                                </motion.div>
-                                <motion.div
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    <Button className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-200">
-                                        Settings
-                                    </Button>
-                                </motion.div>
-                                <div className="w-8 h-8 bg-purple-400 rounded-full flex items-center justify-center text-sm font-bold">
-                                    J
-                                </div>
+                                <Link href="/dashboard">
+                                    <motion.div
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <Button className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-200">
+                                            Dashboard
+                                        </Button>
+                                    </motion.div>
+                                </Link>
+                                <Link href="/settings">
+                                    <motion.div
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <Button className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-200">
+                                            Settings
+                                        </Button>
+                                    </motion.div>
+                                </Link>
+                                <UserButton afterSignOutUrl="/" />
                             </div>
                         </>
                     ) : (
                         <>
-                            <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                <Button className="bg-transparent border-2 border-purple-300 text-purple-200 hover:bg-purple-300 hover:text-purple-900 backdrop-blur-sm shadow-lg transition-all duration-200">
-                                    Sign In
-                                </Button>
-                            </motion.div>
-                            <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                <Button className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-200">
-                                    Sign Up
-                                </Button>
-                            </motion.div>
+                            <SignInButton mode="modal">
+                                <motion.div
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <Button
+                                        variant="outline"
+                                        className="bg-transparent border-2 border-purple-300 text-purple-200 hover:bg-purple-300 hover:text-purple-900 backdrop-blur-sm shadow-lg transition-all duration-200"
+                                    >
+                                        Sign In
+                                    </Button>
+                                </motion.div>
+                            </SignInButton>
+                            <SignUpButton mode="modal">
+                                <motion.div
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <Button className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-200">
+                                        Sign Up
+                                    </Button>
+                                </motion.div>
+                            </SignUpButton>
                         </>
                     )}
                 </motion.div>
@@ -525,13 +557,17 @@ export default function LandingPage() {
                     whileTap={{ scale: 0.95 }}
                 >
                     {isSignedIn ? (
-                        <Button className="bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600 text-white hover:from-purple-600 hover:via-indigo-600 hover:to-purple-700 text-lg px-8 py-3 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 transform hover:-translate-y-1">
-                            Continue Learning
-                        </Button>
+                        <Link href="/dashboard">
+                            <Button className="bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600 text-white hover:from-purple-600 hover:via-indigo-600 hover:to-purple-700 text-lg px-8 py-3 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 transform hover:-translate-y-1">
+                                Continue Learning
+                            </Button>
+                        </Link>
                     ) : (
-                        <Button className="bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600 text-white hover:from-purple-600 hover:via-indigo-600 hover:to-purple-700 text-lg px-8 py-3 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 transform hover:-translate-y-1">
-                            Get Started
-                        </Button>
+                        <SignInButton mode="modal">
+                            <Button className="bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600 text-white hover:from-purple-600 hover:via-indigo-600 hover:to-purple-700 text-lg px-8 py-3 shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 transform hover:-translate-y-1">
+                                Get Started
+                            </Button>
+                        </SignInButton>
                     )}
                 </motion.div>
 
